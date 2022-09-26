@@ -91,7 +91,12 @@ StopWatchInterface *timer = NULL;
 // Particle data
 GLuint vbo = 0;                                  // OpenGL vertex buffer object
 struct cudaGraphicsResource *cuda_vbo_resource;  // handles OpenGL-CUDA exchange
+#ifndef OPTIMUS
 static cData *particles = NULL;  // particle positions in host memory
+#else
+cData *particles = NULL; // particle positions in host memory
+cData *particles_gpu = NULL; // particle positions in device memory
+#endif
 static int lastx = 0, lasty = 0;
 
 // Texture pitch
@@ -145,6 +150,10 @@ void display(void) {
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
+#ifdef OPTIMUS
+    glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(cData) * DS,
+                    particles, GL_DYNAMIC_DRAW_ARB);
+#endif
   glVertexPointer(2, GL_FLOAT, 0, NULL);
   glDrawArrays(GL_POINTS, 0, DS);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -277,19 +286,21 @@ void keyboard(unsigned char key, int x, int y) {
 
       initParticles(particles, DIM, DIM);
 
+#ifndef OPTIMUS
       cudaGraphicsUnregisterResource(cuda_vbo_resource);
-
       getLastCudaError("cudaGraphicsUnregisterBuffer failed");
+#endif
 
       glBindBuffer(GL_ARRAY_BUFFER, vbo);
       glBufferData(GL_ARRAY_BUFFER, sizeof(cData) * DS, particles,
                    GL_DYNAMIC_DRAW_ARB);
       glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+#ifndef OPTIMUS
       cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, vbo,
                                    cudaGraphicsMapFlagsNone);
-
       getLastCudaError("cudaGraphicsGLRegisterBuffer failed");
+#endif
       break;
 
     default:
@@ -412,7 +423,11 @@ int main(int argc, char **argv) {
 
   // use command-line specified CUDA device, otherwise use device with highest
   // Gflops/s
+#ifndef OPTIMUS
   devID = findCudaDevice(argc, (const char **)argv);
+#else
+    devID = gpuGetMaxGflopsDeviceId();
+#endif
 
   // get number of SMs on this GPU
   checkCudaErrors(cudaGetDeviceProperties(&deviceProps, devID));
@@ -443,11 +458,17 @@ int main(int argc, char **argv) {
 
   setupTexture(DIM, DIM);
 
-  // Create particle array
+  // Create particle array in host memory
   particles = (cData *)malloc(sizeof(cData) * DS);
   memset(particles, 0, sizeof(cData) * DS);
 
   initParticles(particles, DIM, DIM);
+
+#ifdef OPTIMUS
+    // Create particle array in device memory
+    cudaMalloc((void **)&particles_gpu, sizeof(cData) * DS);
+    cudaMemcpy(particles_gpu, particles, sizeof(cData) * DS, cudaMemcpyHostToDevice);
+#endif
 
   // Create CUFFT transform plan configuration
   checkCudaErrors(cufftPlan2d(&planr2c, DIM, DIM, CUFFT_R2C));
@@ -464,9 +485,11 @@ int main(int argc, char **argv) {
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+#ifndef OPTIMUS
   checkCudaErrors(cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, vbo,
                                                cudaGraphicsMapFlagsNone));
   getLastCudaError("cudaGraphicsGLRegisterBuffer failed");
+#endif
 
   if (ref_file) {
     autoTest(argv);
