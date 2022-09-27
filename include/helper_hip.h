@@ -83,7 +83,7 @@
 #define gpuMalloc(...) hipMalloc(__VA_ARGS__)
 #define gpuMallocArray(...) hipMallocArray(__VA_ARGS__)
 #define gpuMallocPitch(...) hipMallocPitch(__VA_ARGS__)
-#define gpuMemcpy(...) hipMemcpy
+#define gpuMemcpy(...) hipMemcpy(__VA_ARGS__)
 #define gpuMemcpy2DToArray(...) hipMemcpy2DToArray(__VA_ARGS__)
 #define gpuMemcpyDeviceToDevice hipMemcpyDeviceToDevice
 #define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost

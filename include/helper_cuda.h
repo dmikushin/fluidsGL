@@ -66,7 +66,7 @@
 #define gpuFreeArray(...) cudaFreeArray(__VA_ARGS__)
 #define gpuGetDevice(...) cudaGetDevice(__VA_ARGS__)
 #define gpuGetDeviceCount(...) cudaGetDeviceCount(__VA_ARGS__)
-#define gpuGetDeviceProperties(...) gpuGetDeviceProperties(__VA_ARGS__)
+#define gpuGetDeviceProperties(...) cudaGetDeviceProperties(__VA_ARGS__)
 #define gpuGetErrorName(...) cudaGetErrorName(__VA_ARGS__)
 #define gpuGetErrorString(...) cudaGetErrorString(__VA_ARGS__)
 #define gpuGetLastError(...) cudaGetLastError(__VA_ARGS__)
@@ -81,7 +81,7 @@
 #define gpuMalloc(...) cudaMalloc(__VA_ARGS__)
 #define gpuMallocArray(...) cudaMallocArray(__VA_ARGS__)
 #define gpuMallocPitch(...) cudaMallocPitch(__VA_ARGS__)
-#define gpuMemcpy(...) cudaMemcpy
+#define gpuMemcpy(...) cudaMemcpy(__VA_ARGS__)
 #define gpuMemcpy2DToArray(...) cudaMemcpy2DToArray(__VA_ARGS__)
 #define gpuMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
 #define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
@@ -101,7 +101,7 @@
 // CUDA Runtime error messages
 #ifdef __DRIVER_TYPES_H__
 static const char *_cudaGetErrorEnum(gpuError_t error) {
-  return hipGetErrorName(error);
+  return cudaGetErrorName(error);
 }
 #endif
 
