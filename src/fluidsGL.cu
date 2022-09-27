@@ -156,7 +156,11 @@ void display(void) {
 
   // render points from vertex buffer
   glClear(GL_COLOR_BUFFER_BIT);
+#if defined(__CUDACC__)
   glColor4f(0, 1, 0, 0.5f);
+#elif defined(__HIPCC__)
+  glColor4f(1, 0, 0, 0.5f);
+#endif
   glPointSize(1);
   glEnable(GL_POINT_SMOOTH);
   glEnable(GL_BLEND);
@@ -166,8 +170,8 @@ void display(void) {
   glDisable(GL_CULL_FACE);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 #ifdef OPTIMUS
-    glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(cData) * DS,
-                    particles, GL_DYNAMIC_DRAW_ARB);
+  glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(cData) * DS,
+                  particles, GL_DYNAMIC_DRAW_ARB);
 #endif
   glVertexPointer(2, GL_FLOAT, 0, NULL);
   glDrawArrays(GL_POINTS, 0, DS);
