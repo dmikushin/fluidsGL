@@ -30,6 +30,15 @@
 
 #include "defines.h"
 
+#if defined(__CUDACC__)
+#include <cufft.h>        // CUDA FFT Libraries
+#include <helper_cuda.h>
+#elif defined(__HIPCC__)
+#include <hip/hip_runtime.h>
+#include <rocfft.h>
+#include <helper_hip.h>
+#endif
+
 // Vector data type used to velocity and force fields
 typedef float2 cData;
 
@@ -48,7 +57,7 @@ __global__ void addForces_k(cData *v, int dx, int dy, int spx, int spy,
 // interpolation in the velocity space.
 __global__ void advectVelocity_k(cData *v, float *vx, float *vy, int dx,
                                  int pdx, int dy, float dt, int lb,
-                                 cudaTextureObject_t tex);
+                                 gpuTextureObject_t tex);
 
 // This method performs velocity diffusion and forces mass conservation
 // in the frequency domain. The inputs 'vx' and 'vy' are complex-valued

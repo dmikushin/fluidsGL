@@ -44,16 +44,25 @@
 #include <string.h>
 
 // CUDA standard includes
-#include <cuda_runtime.h>
+#ifndef OPTIMUS
 #include <cuda_gl_interop.h>
+#endif
 
 // CUDA FFT Libraries
+#if defined(__CUDACC__)
 #include <cufft.h>
+#elif defined(__HIPCC__)
+#include <rocfft.h>
+#endif
 
 // CUDA helper functions
 #include <helper_functions.h>
 #include <rendercheck_gl.h>
+#if defined(__CUDACC__)
 #include <helper_cuda.h>
+#elif defined(__HIPCC__)
+#include <helper_hip.h>
+#endif
 
 #include "defines.h"
 #include "fluidsGL_kernels.h"
@@ -72,9 +81,15 @@ const char *sSDKname = "fluidsGL";
 void cleanup(void);
 void reshape(int x, int y);
 
+#if defined(__CUDACC__)
 // CUFFT plan handle
 cufftHandle planr2c;
 cufftHandle planc2r;
+#elif defined(__HIPCC__)
+// rocFFT plan handle
+rocfft_plan planr2c;
+rocfft_plan planc2r;
+#endif
 static cData *vxfield = NULL;
 static cData *vyfield = NULL;
 
@@ -90,7 +105,7 @@ StopWatchInterface *timer = NULL;
 
 // Particle data
 GLuint vbo = 0;                                  // OpenGL vertex buffer object
-struct cudaGraphicsResource *cuda_vbo_resource;  // handles OpenGL-CUDA exchange
+gpuGraphicsResource *cuda_vbo_resource;  // handles OpenGL-CUDA exchange
 #ifndef OPTIMUS
 static cData *particles = NULL;  // particle positions in host memory
 #else
@@ -282,13 +297,13 @@ void keyboard(unsigned char key, int x, int y) {
 
     case 'r':
       memset(hvfield, 0, sizeof(cData) * DS);
-      cudaMemcpy(dvfield, hvfield, sizeof(cData) * DS, cudaMemcpyHostToDevice);
+      gpuMemcpy(dvfield, hvfield, sizeof(cData) * DS, gpuMemcpyHostToDevice);
 
       initParticles(particles, DIM, DIM);
 
 #ifndef OPTIMUS
-      cudaGraphicsUnregisterResource(cuda_vbo_resource);
-      getLastCudaError("cudaGraphicsUnregisterBuffer failed");
+      gpuGraphicsUnregisterResource(cuda_vbo_resource);
+      getLastCudaError("gpuGraphicsUnregisterBuffer failed");
 #endif
 
       glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -297,9 +312,9 @@ void keyboard(unsigned char key, int x, int y) {
       glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 #ifndef OPTIMUS
-      cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, vbo,
-                                   cudaGraphicsMapFlagsNone);
-      getLastCudaError("cudaGraphicsGLRegisterBuffer failed");
+      gpuGraphicsGLRegisterBuffer(&cuda_vbo_resource, vbo,
+                                   gpuGraphicsMapFlagsNone);
+      getLastCudaError("gpuGraphicsGLRegisterBuffer failed");
 #endif
       break;
 
@@ -350,18 +365,23 @@ void reshape(int x, int y) {
 }
 
 void cleanup(void) {
-  cudaGraphicsUnregisterResource(cuda_vbo_resource);
+  gpuGraphicsUnregisterResource(cuda_vbo_resource);
 
   deleteTexture();
 
   // Free all host and device resources
   free(hvfield);
   free(particles);
-  cudaFree(dvfield);
-  cudaFree(vxfield);
-  cudaFree(vyfield);
+  gpuFree(dvfield);
+  gpuFree(vxfield);
+  gpuFree(vyfield);
+#if defined(__CUDACC__)
   cufftDestroy(planr2c);
   cufftDestroy(planc2r);
+#elif defined(__HIPCC__)
+  rocfft_plan_destroy(planr2c);
+  rocfft_plan_destroy(planc2r);
+#endif
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glDeleteBuffers(1, &vbo);
@@ -397,7 +417,7 @@ int initGL(int *argc, char **argv) {
 
 int main(int argc, char **argv) {
   int devID;
-  cudaDeviceProp deviceProps;
+  gpuDeviceProp deviceProps;
 
 #if defined(__linux__)
   char *Xstatus = getenv("DISPLAY");
@@ -430,7 +450,7 @@ int main(int argc, char **argv) {
 #endif
 
   // get number of SMs on this GPU
-  checkCudaErrors(cudaGetDeviceProperties(&deviceProps, devID));
+  checkCudaErrors(gpuGetDeviceProperties(&deviceProps, devID));
   printf("CUDA device [%s] has %d Multi-Processors\n", deviceProps.name,
          deviceProps.multiProcessorCount);
 
@@ -449,12 +469,12 @@ int main(int argc, char **argv) {
   memset(hvfield, 0, sizeof(cData) * DS);
 
   // Allocate and initialize device data
-  cudaMallocPitch((void **)&dvfield, &tPitch, sizeof(cData) * DIM, DIM);
+  gpuMallocPitch((void **)&dvfield, &tPitch, sizeof(cData) * DIM, DIM);
 
-  cudaMemcpy(dvfield, hvfield, sizeof(cData) * DS, cudaMemcpyHostToDevice);
+  gpuMemcpy(dvfield, hvfield, sizeof(cData) * DS, gpuMemcpyHostToDevice);
   // Temporary complex velocity field data
-  cudaMalloc((void **)&vxfield, sizeof(cData) * PDS);
-  cudaMalloc((void **)&vyfield, sizeof(cData) * PDS);
+  gpuMalloc((void **)&vxfield, sizeof(cData) * PDS);
+  gpuMalloc((void **)&vyfield, sizeof(cData) * PDS);
 
   setupTexture(DIM, DIM);
 
@@ -466,13 +486,20 @@ int main(int argc, char **argv) {
 
 #ifdef OPTIMUS
     // Create particle array in device memory
-    cudaMalloc((void **)&particles_gpu, sizeof(cData) * DS);
-    cudaMemcpy(particles_gpu, particles, sizeof(cData) * DS, cudaMemcpyHostToDevice);
+    gpuMalloc((void **)&particles_gpu, sizeof(cData) * DS);
+    gpuMemcpy(particles_gpu, particles, sizeof(cData) * DS, gpuMemcpyHostToDevice);
 #endif
 
+#if defined(__CUDACC__)
   // Create CUFFT transform plan configuration
   checkCudaErrors(cufftPlan2d(&planr2c, DIM, DIM, CUFFT_R2C));
   checkCudaErrors(cufftPlan2d(&planc2r, DIM, DIM, CUFFT_C2R));
+#elif defined(__HIPCC__)
+  // Create rocFFT transform plan configuration
+  size_t lengths[] = { DIM, DIM };
+  checkRocfftErrors(rocfft_plan_create(&planr2c, rocfft_placement_inplace, rocfft_transform_type_real_forward, rocfft_precision_single, 2, lengths, 1, NULL));
+  checkRocfftErrors(rocfft_plan_create(&planc2r, rocfft_placement_inplace, rocfft_transform_type_real_inverse, rocfft_precision_single, 2, lengths, 1, NULL));
+#endif
 
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -486,9 +513,9 @@ int main(int argc, char **argv) {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 #ifndef OPTIMUS
-  checkCudaErrors(cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, vbo,
-                                               cudaGraphicsMapFlagsNone));
-  getLastCudaError("cudaGraphicsGLRegisterBuffer failed");
+  checkCudaErrors(gpuGraphicsGLRegisterBuffer(&cuda_vbo_resource, vbo,
+                                               gpuGraphicsMapFlagsNone));
+  getLastCudaError("gpuGraphicsGLRegisterBuffer failed");
 #endif
 
   if (ref_file) {

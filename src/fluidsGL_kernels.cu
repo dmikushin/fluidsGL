@@ -28,10 +28,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <cuda_runtime.h>
-#include <cufft.h>        // CUDA FFT Libraries
-#include <helper_cuda.h>  // Helper functions for CUDA Error handling
-
 // OpenGL Graphics includes
 #define HELPERGL_EXTERN_GL_FUNC_IMPLEMENTATION
 #include <helper_gl.h>
@@ -40,18 +36,25 @@
 #include "fluidsGL_kernels.cuh"
 
 // Texture object for reading velocity field
-cudaTextureObject_t texObj;
-static cudaArray *array = NULL;
+gpuTextureObject_t texObj;
+static gpuArray *array = NULL;
 
 // Particle data
 extern GLuint vbo;  // OpenGL vertex buffer object
-extern struct cudaGraphicsResource
+extern gpuGraphicsResource
     *cuda_vbo_resource;  // handles OpenGL-CUDA exchange
 
 // Texture pitch
 extern size_t tPitch;
+#if defined(__CUDACC__)
+// CUFFT plan handle
 extern cufftHandle planr2c;
 extern cufftHandle planc2r;
+#elif defined(__HIPCC__)
+// rocFFT plan handle
+extern rocfft_plan planr2c;
+extern rocfft_plan planc2r;
+#endif
 cData *vxfield = NULL;
 cData *vyfield = NULL;
 
@@ -61,37 +64,37 @@ extern cData *particles_gpu; // particle positions in device memory
 #endif
 
 void setupTexture(int x, int y) {
-  cudaChannelFormatDesc desc = cudaCreateChannelDesc<float2>();
-    getLastCudaError("cudaCreateChannelDesc failed");
+  gpuChannelFormatDesc desc = gpuCreateChannelDesc<float2>();
+    getLastCudaError("gpuCreateChannelDesc failed");
 
-  cudaMallocArray(&array, &desc, y, x);
-  getLastCudaError("cudaMalloc failed");
+  gpuMallocArray(&array, &desc, y, x);
+  getLastCudaError("gpuMalloc failed");
 
-  cudaResourceDesc texRes;
-  memset(&texRes, 0, sizeof(cudaResourceDesc));
+  gpuResourceDesc texRes;
+  memset(&texRes, 0, sizeof(gpuResourceDesc));
 
-  texRes.resType = cudaResourceTypeArray;
+  texRes.resType = gpuResourceTypeArray;
   texRes.res.array.array = array;
 
-  cudaTextureDesc texDescr;
-  memset(&texDescr, 0, sizeof(cudaTextureDesc));
+  gpuTextureDesc texDescr;
+  memset(&texDescr, 0, sizeof(gpuTextureDesc));
 
   texDescr.normalizedCoords = false;
-  texDescr.filterMode = cudaFilterModeLinear;
-  texDescr.addressMode[0] = cudaAddressModeWrap;
-  texDescr.readMode = cudaReadModeElementType;
+  texDescr.filterMode = gpuFilterModeLinear;
+  texDescr.addressMode[0] = gpuAddressModeWrap;
+  texDescr.readMode = gpuReadModeElementType;
 
-  checkCudaErrors(cudaCreateTextureObject(&texObj, &texRes, &texDescr, NULL));
+  checkCudaErrors(gpuCreateTextureObject(&texObj, &texRes, &texDescr, NULL));
 }
 
 void updateTexture(cData *data, size_t wib, size_t h, size_t pitch) {
-  checkCudaErrors(cudaMemcpy2DToArray(array, 0, 0, data, pitch, wib, h,
-                                      cudaMemcpyDeviceToDevice));
+  checkCudaErrors(gpuMemcpy2DToArray(array, 0, 0, data, pitch, wib, h,
+                                      gpuMemcpyDeviceToDevice));
 }
 
 void deleteTexture(void) {
-  checkCudaErrors(cudaDestroyTextureObject(texObj));
-  checkCudaErrors(cudaFreeArray(array));
+  checkCudaErrors(gpuDestroyTextureObject(texObj));
+  checkCudaErrors(gpuFreeArray(array));
 }
 
 // Note that these kernels are designed to work with arbitrary
@@ -126,7 +129,7 @@ __global__ void addForces_k(cData *v, int dx, int dy, int spx, int spy,
 // interpolation in the velocity space.
 __global__ void advectVelocity_k(cData *v, float *vx, float *vy, int dx,
                                  int pdx, int dy, float dt, int lb,
-                                 cudaTextureObject_t texObject) {
+                                 gpuTextureObject_t texObject) {
   int gtidx = blockIdx.x * blockDim.x + threadIdx.x;
   int gtidy = blockIdx.y * (lb * blockDim.y) + threadIdx.y * lb;
   int p;
@@ -317,19 +320,29 @@ extern "C" void advectVelocity(cData *v, float *vx, float *vy, int dx, int pdx,
 extern "C" void diffuseProject(cData *vx, cData *vy, int dx, int dy, float dt,
                                float visc) {
   // Forward FFT
+#if defined(__CUDACC__)
   checkCudaErrors(cufftExecR2C(planr2c, (cufftReal *)vx, (cufftComplex *)vx));
   checkCudaErrors(cufftExecR2C(planr2c, (cufftReal *)vy, (cufftComplex *)vy));
+#elif defined(__HIPCC__)
+  checkCudaErrors(rocfft_execute(planr2c, reinterpret_cast<void**>(&vx), NULL, NULL));
+  checkCudaErrors(rocfft_execute(planr2c, reinterpret_cast<void**>(&vy), NULL, NULL));
+#endif
 
-  uint3 grid = make_uint3((dx / TILEX) + (!(dx % TILEX) ? 0 : 1),
-                          (dy / TILEY) + (!(dy % TILEY) ? 0 : 1), 1);
-  uint3 tids = make_uint3(TIDSX, TIDSY, 1);
+  dim3 grid((dx / TILEX) + (!(dx % TILEX) ? 0 : 1),
+            (dy / TILEY) + (!(dy % TILEY) ? 0 : 1), 1);
+  dim3 tids(TIDSX, TIDSY, 1);
 
   diffuseProject_k<<<grid, tids>>>(vx, vy, dx, dy, dt, visc, TILEY / TIDSY);
   getLastCudaError("diffuseProject_k failed.");
 
   // Inverse FFT
+#if defined(__CUDACC__)
   checkCudaErrors(cufftExecC2R(planc2r, (cufftComplex *)vx, (cufftReal *)vx));
   checkCudaErrors(cufftExecC2R(planc2r, (cufftComplex *)vy, (cufftReal *)vy));
+#elif defined(__HIPCC__)
+  checkCudaErrors(rocfft_execute(planc2r, reinterpret_cast<void**>(&vx), NULL, NULL));
+  checkCudaErrors(rocfft_execute(planc2r, reinterpret_cast<void**>(&vy), NULL, NULL));
+#endif
 }
 
 extern "C" void updateVelocity(cData *v, float *vx, float *vy, int dx, int pdx,
@@ -351,25 +364,25 @@ extern "C" void advectParticles(GLuint vbo, cData *v, int dx, int dy,
 
 #ifndef OPTIMUS
   cData *p;
-  cudaGraphicsMapResources(1, &cuda_vbo_resource, 0);
-  getLastCudaError("cudaGraphicsMapResources failed");
+  gpuGraphicsMapResources(1, &cuda_vbo_resource, 0);
+  getLastCudaError("gpuGraphicsMapResources failed");
 
   size_t num_bytes;
-  cudaGraphicsResourceGetMappedPointer((void **)&p, &num_bytes,
+  gpuGraphicsResourceGetMappedPointer((void **)&p, &num_bytes,
                                        cuda_vbo_resource);
-  getLastCudaError("cudaGraphicsResourceGetMappedPointer failed");
+  getLastCudaError("gpuGraphicsResourceGetMappedPointer failed");
 #else
-	cData *p = particles_gpu;
+  cData *p = particles_gpu;
 #endif
 
   advectParticles_k<<<grid, tids>>>(p, v, dx, dy, dt, TILEY / TIDSY, tPitch);
   getLastCudaError("advectParticles_k failed.");
 
 #ifndef OPTIMUS
-  cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
-  getLastCudaError("cudaGraphicsUnmapResources failed");
+  gpuGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
+  getLastCudaError("gpuGraphicsUnmapResources failed");
 #else
-    // Update host particles array.
-    cudaMemcpy(particles, particles_gpu, sizeof(cData) * DS, cudaMemcpyDeviceToHost);
+  // Update host particles array.
+  gpuMemcpy(particles, particles_gpu, sizeof(cData) * DS, gpuMemcpyDeviceToHost);
 #endif
 }

@@ -40,66 +40,68 @@
 
 #include <helper_string.h>
 
+#include <hip/hip_runtime.h>
+
 #ifndef EXIT_WAIVED
 #define EXIT_WAIVED 2
 #endif
 
-#define gpuAddressModeWrap cudaAddressModeWrap
-#define gpuArray cudaArray
-#define gpuChannelFormatDesc cudaChannelFormatDesc
-#define gpuComputeModeProhibited cudaComputeModeProhibited
-#define gpuCreateChannelDesc cudaCreateChannelDesc
-#define gpuCreateTextureObject(...) cudaCreateTextureObject(__VA_ARGS__)
-#define gpuDestroyTextureObject(...) cudaDestroyTextureObject(__VA_ARGS__)
-#define gpuDevAttrClockRate cudaDevAttrClockRate
-#define gpuDevAttrComputeCapabilityMajor cudaDevAttrComputeCapabilityMajor
-#define gpuDevAttrComputeCapabilityMinor cudaDevAttrComputeCapabilityMinor
-#define gpuDevAttrIntegrated cudaDevAttrIntegrated
-#define gpuDevAttrMultiProcessorCount cudaDevAttrMultiProcessorCount
-#define gpuDevAttrComputeMode cudaDevAttrComputeMode
-#define gpuDeviceGetAttribute(...) cudaDeviceGetAttribute(__VA_ARGS__)
-#define gpuDeviceProp cudaDeviceProp
-#define gpuError_t cudaError_t
-#define gpuErrorInvalidValue cudaErrorInvalidValue
-#define gpuFilterModeLinear cudaFilterModeLinear
-#define gpuFree(...) cudaFree(__VA_ARGS__)
-#define gpuFreeArray(...) cudaFreeArray(__VA_ARGS__)
-#define gpuGetDevice(...) cudaGetDevice(__VA_ARGS__)
-#define gpuGetDeviceCount(...) cudaGetDeviceCount(__VA_ARGS__)
-#define gpuGetDeviceProperties(...) gpuGetDeviceProperties(__VA_ARGS__)
-#define gpuGetErrorName(...) cudaGetErrorName(__VA_ARGS__)
-#define gpuGetErrorString(...) cudaGetErrorString(__VA_ARGS__)
-#define gpuGetLastError(...) cudaGetLastError(__VA_ARGS__)
-#define gpuGraphicsGLRegisterBuffer(...) cudaGraphicsGLRegisterBuffer(__VA_ARGS__)
-#define gpuGraphicsMapFlagsNone cudaGraphicsMapFlagsNone
-#define gpuGraphicsMapResources cudaGraphicsMapResources
-#define gpuGraphicsResource cudaGraphicsResource
-#define gpuGraphicsResourceGetMappedPointer(...) cudaGraphicsResourceGetMappedPointer(__VA_ARGS__)
-#define gpuGraphicsUnmapResources(...) cudaGraphicsUnmapResources(__VA_ARGS__)
-#define gpuGraphicsUnregisterBuffer(...) cudaGraphicsUnregisterBuffer(__VA_ARGS__)
-#define gpuGraphicsUnregisterResource(...) cudaGraphicsUnregisterResource(__VA_ARGS__)
-#define gpuMalloc(...) cudaMalloc(__VA_ARGS__)
-#define gpuMallocArray(...) cudaMallocArray(__VA_ARGS__)
-#define gpuMallocPitch(...) cudaMallocPitch(__VA_ARGS__)
-#define gpuMemcpy(...) cudaMemcpy
-#define gpuMemcpy2DToArray(...) cudaMemcpy2DToArray(__VA_ARGS__)
-#define gpuMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
-#define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
-#define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
-#define gpuReadModeElementType cudaReadModeElementType
-#define gpuResourceDesc cudaResourceDesc
-#define gpuResourceTypeArray cudaResourceTypeArray
-#define gpuSetDevice(...) cudaSetDevice(__VA_ARGS__)
-#define gpuSuccess cudaSuccess
-#define gpuTextureDesc cudaTextureDesc
-#define gpuTextureObject_t cudaTextureObject_t
+#define gpuAddressModeWrap hipAddressModeWrap
+#define gpuArray hipArray
+#define gpuChannelFormatDesc hipChannelFormatDesc
+#define gpuComputeModeProhibited hipComputeModeProhibited
+#define gpuCreateChannelDesc hipCreateChannelDesc
+#define gpuCreateTextureObject(...) hipCreateTextureObject(__VA_ARGS__)
+#define gpuDestroyTextureObject(...) hipDestroyTextureObject(__VA_ARGS__)
+#define gpuDevAttrClockRate hipDeviceAttributeClockRate
+#define gpuDevAttrComputeCapabilityMajor hipDeviceAttributeComputeCapabilityMajor
+#define gpuDevAttrComputeCapabilityMinor hipDeviceAttributeComputeCapabilityMinor
+#define gpuDevAttrIntegrated hipDeviceAttributeIntegrated
+#define gpuDevAttrMultiProcessorCount hipDeviceAttributeMultiprocessorCount
+#define gpuDevAttrComputeMode hipDeviceAttributeComputeMode
+#define gpuDeviceGetAttribute(...) hipDeviceGetAttribute(__VA_ARGS__)
+#define gpuDeviceProp hipDeviceProp_t
+#define gpuError_t hipError_t
+#define gpuErrorInvalidValue hipErrorInvalidValue
+#define gpuFilterModeLinear hipFilterModeLinear
+#define gpuFree(...) hipFree(__VA_ARGS__)
+#define gpuFreeArray(...) hipFreeArray(__VA_ARGS__)
+#define gpuGetDevice(...) hipGetDevice(__VA_ARGS__)
+#define gpuGetDeviceCount(...) hipGetDeviceCount(__VA_ARGS__)
+#define gpuGetDeviceProperties(...) hipGetDeviceProperties(__VA_ARGS__)
+#define gpuGetErrorName(...) hipGetErrorName(__VA_ARGS__)
+#define gpuGetErrorString(...) hipGetErrorString(__VA_ARGS__)
+#define gpuGetLastError(...) hipGetLastError(__VA_ARGS__)
+#define gpuGraphicsGLRegisterBuffer(...) hipGraphicsGLRegisterBuffer(__VA_ARGS__)
+#define gpuGraphicsMapFlagsNone hipGraphicsMapFlagsNone
+#define gpuGraphicsMapResources hipGraphicsMapResources
+#define gpuGraphicsResource hipGraphicsResource
+#define gpuGraphicsResourceGetMappedPointer(...) hipGraphicsResourceGetMappedPointer(__VA_ARGS__)
+#define gpuGraphicsUnmapResources(...) hipGraphicsUnmapResources(__VA_ARGS__)
+#define gpuGraphicsUnregisterBuffer(...) hipGraphicsUnregisterBuffer(__VA_ARGS__)
+#define gpuGraphicsUnregisterResource(...) hipGraphicsUnregisterResource(__VA_ARGS__)
+#define gpuMalloc(...) hipMalloc(__VA_ARGS__)
+#define gpuMallocArray(...) hipMallocArray(__VA_ARGS__)
+#define gpuMallocPitch(...) hipMallocPitch(__VA_ARGS__)
+#define gpuMemcpy(...) hipMemcpy
+#define gpuMemcpy2DToArray(...) hipMemcpy2DToArray(__VA_ARGS__)
+#define gpuMemcpyDeviceToDevice hipMemcpyDeviceToDevice
+#define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
+#define gpuMemcpyHostToDevice hipMemcpyHostToDevice
+#define gpuReadModeElementType hipReadModeElementType
+#define gpuResourceDesc hipResourceDesc
+#define gpuResourceTypeArray hipResourceTypeArray
+#define gpuSetDevice(...) hipSetDevice(__VA_ARGS__)
+#define gpuSuccess hipSuccess
+#define gpuTextureDesc hipTextureDesc
+#define gpuTextureObject_t hipTextureObject_t
 
 // Note, it is required that your SDK sample to include the proper header
 // files, please refer the CUDA examples for examples of the needed CUDA
 // headers, which may change depending on which CUDA functions are used.
 
 // CUDA Runtime error messages
-#ifdef __DRIVER_TYPES_H__
+#ifdef HIP_INCLUDE_HIP_DRIVER_TYPES_H
 static const char *_cudaGetErrorEnum(gpuError_t error) {
   return hipGetErrorName(error);
 }
@@ -154,60 +156,36 @@ static const char *_cudaGetErrorEnum(cublasStatus_t error) {
 }
 #endif
 
-#ifdef _CUFFT_H_
+#ifdef __ROCFFT_H__
 // cuFFT API errors
-static const char *_cudaGetErrorEnum(cufftResult error) {
+static const char *_cudaGetErrorEnum(rocfft_status error) {
   switch (error) {
-    case CUFFT_SUCCESS:
-      return "CUFFT_SUCCESS";
+    case rocfft_status_success:
+      return "rocfft_status_success";
 
-    case CUFFT_INVALID_PLAN:
-      return "CUFFT_INVALID_PLAN";
+    case rocfft_status_failure:
+      return "rocfft_status_failure";
 
-    case CUFFT_ALLOC_FAILED:
-      return "CUFFT_ALLOC_FAILED";
+    case rocfft_status_invalid_arg_value:
+      return "rocfft_status_invalid_arg_value";
 
-    case CUFFT_INVALID_TYPE:
-      return "CUFFT_INVALID_TYPE";
+    case rocfft_status_invalid_dimensions:
+      return "rocfft_status_invalid_dimensions";
 
-    case CUFFT_INVALID_VALUE:
-      return "CUFFT_INVALID_VALUE";
+    case rocfft_status_invalid_array_type:
+      return "rocfft_status_invalid_array_type";
 
-    case CUFFT_INTERNAL_ERROR:
-      return "CUFFT_INTERNAL_ERROR";
+    case rocfft_status_invalid_strides:
+      return "rocfft_status_invalid_strides";
 
-    case CUFFT_EXEC_FAILED:
-      return "CUFFT_EXEC_FAILED";
+    case rocfft_status_invalid_distance:
+      return "rocfft_status_invalid_distance";
 
-    case CUFFT_SETUP_FAILED:
-      return "CUFFT_SETUP_FAILED";
+    case rocfft_status_invalid_offset:
+      return "rocfft_status_invalid_offset";
 
-    case CUFFT_INVALID_SIZE:
-      return "CUFFT_INVALID_SIZE";
-
-    case CUFFT_UNALIGNED_DATA:
-      return "CUFFT_UNALIGNED_DATA";
-
-    case CUFFT_INCOMPLETE_PARAMETER_LIST:
-      return "CUFFT_INCOMPLETE_PARAMETER_LIST";
-
-    case CUFFT_INVALID_DEVICE:
-      return "CUFFT_INVALID_DEVICE";
-
-    case CUFFT_PARSE_ERROR:
-      return "CUFFT_PARSE_ERROR";
-
-    case CUFFT_NO_WORKSPACE:
-      return "CUFFT_NO_WORKSPACE";
-
-    case CUFFT_NOT_IMPLEMENTED:
-      return "CUFFT_NOT_IMPLEMENTED";
-
-    case CUFFT_LICENSE_ERROR:
-      return "CUFFT_LICENSE_ERROR";
-
-    case CUFFT_NOT_SUPPORTED:
-      return "CUFFT_NOT_SUPPORTED";
+    case rocfft_status_invalid_work_buffer:
+      return "rocfft_status_invalid_work_buffer";
   }
 
   return "<unknown>";
@@ -639,10 +617,12 @@ void check(T result, char const *const func, const char *const file,
   }
 }
 
-#ifdef __DRIVER_TYPES_H__
+#ifdef HIP_INCLUDE_HIP_DRIVER_TYPES_H
 // This will output the proper CUDA error strings in the event
 // that a CUDA host call returns an error
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
+
+#define checkRocfftErrors(val) check((val), #val, __FILE__, __LINE__)
 
 // This will output the proper error string when calling gpuGetLastError
 #define getLastCudaError(msg) __getLastCudaError(msg, __FILE__, __LINE__)
@@ -784,7 +764,7 @@ inline const char* _ConvertSMVer2ArchName(int major, int minor) {
 }
   // end of GPU Architecture definitions
 
-#ifdef __CUDA_RUNTIME_H__
+#ifdef HIP_INCLUDE_HIP_HIP_RUNTIME_H
 // General GPU Device CUDA Initialization
 inline int gpuDeviceInit(int devID) {
   int device_count;
